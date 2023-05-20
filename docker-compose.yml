@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  swans-identification-backend:
+    build: .
+    restart: unless-stopped
+    ports:
+      - 5000:5000

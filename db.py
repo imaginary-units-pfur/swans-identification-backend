@@ -1,3 +1,15 @@
+# .schema
+# CREATE TABLE tag (
+#   image_id INTEGER NOT NULL,
+#   tag_name STRING NOT NULL
+# );
+# CREATE TABLE image_data (
+#   id INTEGER PRIMARY KEY AUTOINCREMENT ,
+#   original_name STRING NOT NULL,
+#   uuid STRING NOT NULL UNIQUE
+# );
+
+
 import sqlite3
 
 
