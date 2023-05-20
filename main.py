@@ -110,14 +110,14 @@ def process_files(paths: list):
         ]
     )
 
-    for idx, img_path in enumerate(paths):
+    for img_path in paths:
         img = Image.open(img_path)
         prepared_img = val_aug(image=np.array(img))["image"]
         prepared_img = torch.from_numpy(prepared_img).permute(2, 0, 1).unsqueeze(0)
         with torch.no_grad():
             predict = model(prepared_img)[0].softmax(1).detach().cpu()
             result_df.loc[len(result_df)] = [os.path.basename(img_path)] + predict[
-                idx
+                0
             ].tolist()
 
     return result_df.to_dict("records")

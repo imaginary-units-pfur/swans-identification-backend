@@ -6,15 +6,37 @@ import db
 import os
 import uuid
 
+from logging.config import dictConfig
+
+dictConfig(
+    {
+        "version": 1,
+        "formatters": {
+            "default": {
+                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+            }
+        },
+        "handlers": {
+            "wsgi": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://flask.logging.wsgi_errors_stream",
+                "formatter": "default",
+            }
+        },
+        "root": {"level": "INFO", "handlers": ["wsgi"]},
+    }
+)
+
 app = Flask("swans-identification-backend")
 CORS(app)
-app.config["IMAGES_TO_PROCESS"] = "images/to_process/"
-app.config["SAVED_IMAGES"] = "images/saved/"
+app.config["IMAGES_TO_PROCESS"] = "./images/to_process/"
+app.config["SAVED_IMAGES"] = "./images/saved/"
 
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
     paths = []
+    app.logger.info(f"Got files {[x.filename for x in request.files.getlist('f[]')]}")
     for file in request.files.getlist("f[]"):
         if file and file.filename:
             file_name_stored = os.path.join(
@@ -23,6 +45,7 @@ def analyze():
             file.save(file_name_stored)
             paths.append(file_name_stored)
 
+    app.logger.info(f"Seinding paths to model {paths}")
     output = process_files(paths)
     formatted_output = {}
     for analysis in output:
@@ -37,7 +60,11 @@ def analyze():
 
 @app.route("/save", methods=["POST"])
 def save():
+    app.logger.info(f"Got files {[x.filename for x in request.files.getlist('f[]')]}")
+
     tags = request.form["tags"].split(" ")
+    app.logger.info(f"Got tags {tags}")
+
     for file in request.files.getlist("f[]"):
         if file and file.filename:
             file_uuid = str(uuid.uuid4())
