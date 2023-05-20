@@ -95,6 +95,9 @@ val_aug = A.Compose(
     [A.Resize(image_size, image_size), A.Normalize(mean=mean, std=std, p=1)]
 )
 model = Model(vit_backbone.cpu()).to(device)
+model.load_state_dict(
+    torch.load("./ViT-L-14-336_openai_0.987.pth", map_location=torch.device("cpu"))
+)
 
 
 def process_files(paths: list):
@@ -111,9 +114,10 @@ def process_files(paths: list):
         img = Image.open(img_path)
         prepared_img = val_aug(image=np.array(img))["image"]
         prepared_img = torch.from_numpy(prepared_img).permute(2, 0, 1).unsqueeze(0)
-        predict = model(prepared_img)[0].softmax(1)
-        result_df.loc[len(result_df)] = [os.path.basename(img_path)] + predict[
-            idx
-        ].tolist()
+        with torch.no_grad():
+            predict = model(prepared_img)[0].softmax(1).detach().cpu()
+            result_df.loc[len(result_df)] = [os.path.basename(img_path)] + predict[
+                idx
+            ].tolist()
 
     return result_df.to_dict("records")

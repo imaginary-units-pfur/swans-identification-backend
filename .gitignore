@@ -1,3 +1,4 @@
+*.pth
 swan_data.db
 images/
 .DS_Store

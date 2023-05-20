@@ -1,11 +1,13 @@
 from flask import Flask, request
 
 from main import process_files
+from flask_cors import CORS
 import db
 import os
 import uuid
 
 app = Flask("swans-identification-backend")
+CORS(app)
 app.config["IMAGES_TO_PROCESS"] = "images/to_process/"
 app.config["SAVED_IMAGES"] = "images/saved/"
 
@@ -22,10 +24,15 @@ def analyze():
             paths.append(file_name_stored)
 
     output = process_files(paths)
+    formatted_output = {}
+    for analysis in output:
+        filename = analysis.pop("filename")
+        formatted_output[filename] = {"overall_class": analysis}
+
     for path in paths:
         os.remove(path)
 
-    return output
+    return formatted_output
 
 
 @app.route("/save", methods=["POST"])
@@ -48,7 +55,7 @@ def save():
 @app.route("/")
 def index():
     return """
-    <form method=POST action="/save" enctype="multipart/form-data">
+    <form method=POST action="/analyze" enctype="multipart/form-data">
         <input type="file" name="f[]">
         <input type="file" name="f[]">
         <input type="text" name="tags">
