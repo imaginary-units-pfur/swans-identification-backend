@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, url_for
 
 from main import process_files
 from flask_cors import CORS
@@ -63,7 +63,7 @@ def analyze():
 def save():
     app.logger.info(f"Got files {[x.filename for x in request.files.getlist('f[]')]}")
 
-    tags = request.files["tags"].read().trim().split(" ")
+    tags = request.files["tags"].read().decode("utf-8").strip().split(" ")
     app.logger.info(f"Got tags {tags}")
 
     for file in request.files.getlist("f[]"):
@@ -74,48 +74,76 @@ def save():
                 app.config["SAVED_IMAGES"], f"{file_uuid}.{ext}"
             )
             file.save(file_name_stored)
-            db.add_image_with_tags(file_uuid, tags)
+            db.add_image(file_uuid, file.filename, tags)
 
-    resp = {"status": "success"}
-    return resp, 200
+            resp = {"status": "success", "uuid": file_uuid}
+            return resp, 200
+
+    resp = {"status": "internal server error"}
+    return resp, 500
 
 
 @app.route("/image", methods=["GET"])
-def get_image():
+def get_image_by_tags():
     tags = request.args["tags"].split(" ")
     app.logger.info(f"Got tags {tags}")
 
     img_uuids = db.get_by_tags(tags)
 
-    imgs = []
+    output = []
     for img_uuid in img_uuids:
-        imgs.append(find_saved_image(f"{img_uuid}.*"))
+        data = dict()
+        data["filename"] = db.get_filename(img_uuid)
+        data["uuid"] = img_uuid
+        data["tags"] = db.get_tags(img_uuid)
+        data["download"] = url_for("download", uuid=img_uuid)
+        data["update"] = url_for("update", uuid=img_uuid)
+        data["delete"] = url_for("delete", uuid=img_uuid)
+        output.append(data)
 
-    return imgs
+    return output
 
 
-@app.route("/images/<path:path>", methods=["GET"])
-def download_image(path):
-    return send_from_directory(app.config["SAVED_IMAGES"], os.path.basename(path))
+@app.route("/download/<uuid>", methods=["GET"])
+def download(uuid):
+    path = find_saved_image(uuid)
+    if path is not None:
+        return send_from_directory(app.config["SAVED_IMAGES"], os.path.basename(path))
+    else:
+        resp = {"status": "not found"}
+        return resp, 404
 
 
-def find_saved_image(pattern):
+def find_saved_image(uuid):
+    pattern = f"{uuid}.*"
     for root, _, files in os.walk(app.config["SAVED_IMAGES"]):
         for name in files:
             if fnmatch.fnmatch(name, pattern):
                 return os.path.join(root, name)
 
 
-@app.route("/")
-def index():
-    return """
-    <form method=POST action="/save" enctype="multipart/form-data">
-        <input type="file" name="f[]">
-        <input type="file" name="f[]">
-        <input type="text" name="tags">
-        <input type=submit>
-    </form>
-    """
+@app.route("/update/<uuid>", methods=["POST"])
+def update(uuid):
+    app.logger.info(f"Updating {uuid}")
+
+    tags = request.files["tags"].read().decode("utf-8").strip().split(" ")
+    app.logger.info(f"Got new tags {tags}")
+    db.update(uuid, tags)
+
+    resp = {"status": "success"}
+    return resp, 200
+
+
+@app.route("/delete/<uuid>", methods=["POST"])
+def delete(uuid):
+    db.delete_by_uuid(uuid)
+
+    path = find_saved_image(uuid)
+    if path is not None:
+        os.remove(path)
+
+    resp = {"status": "success"}
+    return resp, 200
 
 
 if __name__ == "__main__":
