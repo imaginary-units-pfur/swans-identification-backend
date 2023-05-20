@@ -104,9 +104,9 @@ def process_files(paths: list):
     result_df = pd.DataFrame(
         columns=[
             "filename",
-            "вероятность_шипун",
-            "вероятность_кликун",
-            "вероятность_малый",
+            "шипун",
+            "кликун",
+            "малый",
         ]
     )
 
