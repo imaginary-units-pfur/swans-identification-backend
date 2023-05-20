@@ -1,0 +1,8 @@
+flask
+torch
+albumentations
+numpy
+pandas
+Pillow
+open_clip_torch
+sqlite3
