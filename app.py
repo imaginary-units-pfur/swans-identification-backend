@@ -1,8 +1,9 @@
 from flask import Flask, request
 
 from main import process_files
-import time
+import db
 import os
+import uuid
 
 app = Flask("swans-identification-backend")
 app.config["IMAGES_TO_PROCESS"] = "images/to_process/"
@@ -11,8 +12,6 @@ app.config["SAVED_IMAGES"] = "images/saved/"
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    time.sleep(5)  # for testing purposes
-
     paths = []
     for file in request.files.getlist("f[]"):
         if file and file.filename:
@@ -29,15 +28,31 @@ def analyze():
     return output
 
 
+@app.route("/save", methods=["POST"])
+def save():
+    tags = request.form["tags"].split(" ")
+    for file in request.files.getlist("f[]"):
+        if file and file.filename:
+            file_uuid = str(uuid.uuid4())
+            ext = file.filename.split(".")[-1]
+            file_name_stored = os.path.join(
+                app.config["SAVED_IMAGES"], f"{file_uuid}.{ext}"
+            )
+            file.save(file_name_stored)
+            db.add_image_with_tags(file_uuid, tags)
+
+    resp = {"status": "success"}
+    return resp, 200
+
+
 @app.route("/")
 def index():
     return """
-    <form method=POST action="/analyze" enctype="multipart/form-data">
-    <input type="file" name="f[]">
-    <input type="file" name="f[]">
-    <input type="file" name="f[]">
-    <input type="file" name="f[]">
-    <input type=submit>
+    <form method=POST action="/save" enctype="multipart/form-data">
+        <input type="file" name="f[]">
+        <input type="file" name="f[]">
+        <input type="text" name="tags">
+        <input type=submit>
     </form>
     """
 
