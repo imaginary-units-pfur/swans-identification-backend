@@ -3,8 +3,6 @@ services:
   swans-identification-backend:
     build: .
     restart: unless-stopped
-    env_file:
-      - CONFIG.env
     ports:
       - 5000:5000
     volumes:
