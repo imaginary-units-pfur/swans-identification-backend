@@ -6,6 +6,7 @@ import db
 import os
 import uuid
 import fnmatch
+import json
 
 from logging.config import dictConfig
 
@@ -65,19 +66,26 @@ def save():
 
     tags = request.files["tags"].read().decode("utf-8").strip().split(" ")
     app.logger.info(f"Got tags {tags}")
+    analysis = json.loads(request.files["analysis"].read().decode("utf-8"))
+    app.logger.info(f"Analysis payload {json.dumps(analysis, indent=2)}")
 
     for file in request.files.getlist("f[]"):
-        if file and file.filename and file.filename != "tags":
+        if file and file.filename and file.filename not in ["tags", "analysis"]:
             file_uuid = str(uuid.uuid4())
             ext = file.filename.split(".")[-1]
             file_name_stored = os.path.join(
                 app.config["SAVED_IMAGES"], f"{file_uuid}.{ext}"
             )
             file.save(file_name_stored)
-            db.add_image(file_uuid, file.filename, tags)
-
-            resp = {"status": "success", "uuid": file_uuid}
-            return resp, 200
+            try:
+                birds_prob = analysis["analyzed"]["overall_class"]
+                db.add_image(file_uuid, file.filename, birds_prob, tags)
+                resp = {"status": "success", "uuid": file_uuid}
+                return resp, 200
+            except:
+                app.logger.error(f"Bad payload {json.dumps(analysis, indent=2)}")
+                resp = {"status": "bad request"}
+                return resp, 400
 
     resp = {"status": "internal server error"}
     return resp, 500
@@ -88,17 +96,24 @@ def get_image_by_tags():
     tags = request.args["tags"].split(" ")
     app.logger.info(f"Got tags {tags}")
 
-    img_uuids = db.get_by_tags(tags)
+    img_data = db.get_by_tags(tags)
 
     output = []
-    for img_uuid in img_uuids:
+    for d in img_data:
         data = dict()
-        data["filename"] = db.get_filename(img_uuid)
+        data["filename"] = d[0]
+        img_uuid = d[1]
         data["uuid"] = img_uuid
         data["tags"] = db.get_tags(img_uuid)
-        data["download"] = url_for("download", uuid=img_uuid)
-        data["update"] = url_for("update", uuid=img_uuid)
-        data["delete"] = url_for("delete", uuid=img_uuid)
+        data["download"] = url_for("download", uuid=img_uuid, _external=True)
+        data["update"] = url_for("update", uuid=img_uuid, _external=True)
+        data["delete"] = url_for("delete", uuid=img_uuid, _external=True)
+        data["analysis"] = {
+            "шипун": d[2],
+            "кликун": d[3],
+            "малый": d[4],
+        }
+
         output.append(data)
 
     return output
