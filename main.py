@@ -96,7 +96,7 @@ val_aug = A.Compose(
 )
 model = Model(vit_backbone.cpu()).to(device)
 model.load_state_dict(
-    torch.load("./ViT-L-14-336_openai_0.987.pth", map_location=torch.device("cpu"))
+    torch.load(os.getenv("NETWORK_CHEKPOINT"), map_location=torch.device("cpu"))
 )
 
 
