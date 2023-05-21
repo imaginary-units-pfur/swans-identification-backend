@@ -6,3 +6,4 @@ numpy
 pandas
 Pillow
 open_clip_torch
+ultralytics

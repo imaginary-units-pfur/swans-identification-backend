@@ -1,6 +1,6 @@
 from flask import Flask, request, send_from_directory, url_for
 
-from main import process_files
+from main import test
 from flask_cors import CORS
 import db
 import os
@@ -48,7 +48,7 @@ def analyze():
             paths.append(file_name_stored)
 
     app.logger.info(f"Seinding paths to model {paths}")
-    output = process_files(paths)
+    output = test(paths)
     formatted_output = {}
     for analysis in output:
         filename = analysis.pop("filename")
