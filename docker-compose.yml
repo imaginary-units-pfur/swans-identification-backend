@@ -5,3 +5,6 @@ services:
     restart: unless-stopped
     ports:
       - 5000:5000
+    volumes:
+      - ./swan_data.db:/app/swan_data.db
+      - ./ViT-L-14-336_openai_0.987.pth:/app/ViT-L-14-336_openai_0.987.pth
