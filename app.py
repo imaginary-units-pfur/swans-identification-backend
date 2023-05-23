@@ -51,7 +51,7 @@ def analyze():
     output = test(paths)
     formatted_output = {}
     for analysis in output:
-        filename = analysis.pop("filename")
+        filename = analysis.pop("filename").replace(app.config["IMAGES_TO_PROCESS"], '')
         formatted_output[filename] = {"overall_class": analysis}
 
     for path in paths:

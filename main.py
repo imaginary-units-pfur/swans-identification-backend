@@ -52,7 +52,7 @@ class Multisample_Dropout(nn.Module):
 
 class Swan_dataset_test(Dataset):
     def __init__(self, dirpath, augs):
-        self.fnames = glob.glob(os.path.join(dirpath, '*'))
+        self.fnames = dirpath
         self.augs = augs
 
     def __len__(self):
@@ -118,7 +118,7 @@ def test(paths):
 
     dl = DataLoader(valid_ds, shuffle=False, batch_size=128, num_workers=8)
     classif_model = Model(vit_backbone.cpu(), CFG).to('cpu')
-    classif_model.cuda()
+    classif_model.cpu()
     classif_model.eval()
 
 
@@ -141,16 +141,16 @@ def test(paths):
     for model_name in model_names:
         classif_model.load_state_dict(
         torch.load(model_name, 
-                map_location='cuda'), 
+                map_location='cpu'), 
         
         )
-        classif_model.cuda()
+        classif_model.cpu()
         classif_model.eval()
         
         preds = []
         for batch in tqdm(dl):
             with torch.no_grad():
-                pred = classif_model(batch[0].cuda())
+                pred = classif_model(batch[0].cpu())
                 preds.extend(pred.cpu().detach().softmax(1).numpy())
 
         for idx, i in enumerate(preds):
@@ -168,7 +168,7 @@ def test(paths):
 
     classif_model.load_state_dict(
         torch.load('checkpoints/ViT-L-14-336_openai_3_0.9932698668618455.pth', 
-                map_location='cuda'), 
+                map_location='cpu'), 
         )
 
     path2pred = {}
@@ -197,7 +197,7 @@ def test(paths):
             crop = val_aug(image=crop)['image']
             crop = torch.from_numpy(crop).permute(2, 0, 1)
             crops.append(crop)
-        batch = torch.stack(crops).cuda()
+        batch = torch.stack(crops).cpu()
         with torch.no_grad():
             predict = classif_model(batch).cpu().detach().softmax(1).numpy()
             for i in predict:
